@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Space Grotesk', sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+
+  .animate-fade-out {
+    animation: fadeOut 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .card-gradient-overlay {
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 50%);
+  }
+
+  .card-hover-overlay-gradient {
+    background: linear-gradient(to top, rgba(2, 132, 199, 0.7) 0%, rgba(2, 132, 199, 0.3) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    z-index: 10;
+  }
+
+  .card-hover-overlay-solid {
+    background-color: rgba(2, 132, 199, 0.95);
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    z-index: 10;
+  }
+
+  .group:hover .card-hover-overlay-gradient,
+  .group:hover .card-hover-overlay-solid {
+    opacity: 1;
+  }
+
+  .card-glow {
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0);
+    transition: all 0.3s ease-out;
+  }
+
+  .group:hover .card-glow {
+    box-shadow: 0 0 50px rgba(56, 189, 248, 0.5);
+    border-color: rgba(56, 189, 248, 0.9);
+  }
+}
