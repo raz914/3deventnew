@@ -65,7 +65,7 @@ export function initSplatViewer(options) {
     }
 
     // Performance: limit frame rate to 35 FPS to save CPU/GPU
-    const TARGET_FPS = 35;
+    const TARGET_FPS = 60;
     const MIN_FRAME_MS = 1000 / TARGET_FPS;
     let lastRenderTime = 0;
     const originalTick = app.tick.bind(app);
