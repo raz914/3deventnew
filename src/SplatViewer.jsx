@@ -4,6 +4,7 @@ import HotspotEulerPanel from './components/HotspotEulerPanel';
 import CameraBoundsPanel from './components/CameraBoundsPanel';
 import PlaceholdersPanel from './components/PlaceholdersPanel';
 import RoomButtons from './components/RoomButtons';
+import { captureCanvasToDownload } from './screenshotCapture.js';
 import './SplatViewer.css';
 
 export default function SplatViewer({ onBack }) {
@@ -71,6 +72,7 @@ export default function SplatViewer({ onBack }) {
       <RoomButtons
         onClick={(id) => {
           if (id === 6) setPlaceholdersPanelOpen((o) => !o);
+          if (id === 7 && canvasRef.current) captureCanvasToDownload(canvasRef.current);
         }}
         isAudioPlaying={false}
         hotspotsEnabled={true}

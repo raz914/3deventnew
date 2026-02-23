@@ -5,6 +5,10 @@ import locationIcon from '../assets/locationIcon.png';
 import infoIcon from '../assets/info.png';
 import fullscreenIcon from '../assets/fullscreen.png';
 
+const screenshotIconSvg = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="12" cy="11" r="4"/><path d="M16 6h.01M8 6h.01"/></svg>'
+);
+
 const buttons = [
   { id: 1, icon: homeIcon, alt: 'Home' },
   { id: 2, icon: locationIcon, alt: 'Location' },
@@ -12,6 +16,7 @@ const buttons = [
   { id: 4, icon: infoIcon, alt: 'Info' },
   { id: 5, icon: fullscreenIcon, alt: 'Fullscreen' },
   { id: 6, icon: locationIcon, alt: 'Placeholders' },
+  { id: 7, icon: screenshotIconSvg, alt: 'Screenshot' },
 ];
 
 export default function RoomButtons({
@@ -34,6 +39,7 @@ export default function RoomButtons({
     if (id === 4) return `Infos: ${hotspotsEnabled ? 'On' : 'Off'}`;
     if (id === 5) return `Full Screen: ${isFullscreen ? 'On' : 'Off'}`;
     if (id === 6) return `Placeholders: ${placeholdersPanelOpen ? 'On' : 'Off'}`;
+    if (id === 7) return 'Screenshot';
     return '';
   };
 
