@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { initSplatViewer } from './splatViewer.js';
 import HotspotEulerPanel from './components/HotspotEulerPanel';
+import CameraBoundsPanel from './components/CameraBoundsPanel';
+import PlaceholdersPanel from './components/PlaceholdersPanel';
+import RoomButtons from './components/RoomButtons';
 import './SplatViewer.css';
 
 export default function SplatViewer({ onBack }) {
@@ -14,6 +17,7 @@ export default function SplatViewer({ onBack }) {
   const hotspot2Ref = useRef(null);
   const destroyRef = useRef(null);
   const [viewerApi, setViewerApi] = useState(null);
+  const [placeholdersPanelOpen, setPlaceholdersPanelOpen] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -64,7 +68,18 @@ export default function SplatViewer({ onBack }) {
       >
         Back
       </button>
-   {/*  <HotspotEulerPanel api={viewerApi} /> */}
+      <RoomButtons
+        onClick={(id) => {
+          if (id === 6) setPlaceholdersPanelOpen((o) => !o);
+        }}
+        isAudioPlaying={false}
+        hotspotsEnabled={true}
+        isFullscreen={false}
+        placeholdersPanelOpen={placeholdersPanelOpen}
+      />
+      {placeholdersPanelOpen && <PlaceholdersPanel api={viewerApi} />}
+      {/* <CameraBoundsPanel api={viewerApi} /> */}
+      {/* <HotspotEulerPanel api={viewerApi} /> */}
       <div ref={hotspotsRef} className="splat-viewer__hotspots" aria-hidden="true">
         <div
           ref={hotspot0Ref}

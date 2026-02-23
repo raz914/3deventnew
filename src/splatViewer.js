@@ -1,5 +1,6 @@
 import * as pc from 'playcanvas';
 import { registerOrbitCamera } from './orbitCamera.js';
+import { initPlaceholderSystem } from './placeholderSystem.js';
 
 const INITIAL_CAM = {
     position: { x: -1.134, y: 3.2, z: 4.127 },
@@ -17,9 +18,23 @@ const HOTSPOT_POSITIONS = [
 
 const HOTSPOT1_SPLAT_URL = '/Maniero Concrete Area.sog';
 
+// Initial camera when Hotspot 1 (Edit Area) loads – position, lookAt from panel
+const HOTSPOT1_CAM = {
+    position: { x: 1.797, y: 1.892, z: -3.851 },
+    target: { x: 0.662, y: 1.053, z: -1.068 }
+};
+
 // Euler angles (degrees) for splats – editable via utility panel
 const mainSplatEuler = { x: 180, y: 0, z: 0 };
 const hotspotSplatEulers = [{ x: 175, y: 0, z: 0 }];
+
+// Camera pan bounds (target/lookAt clamped to this AABB); covers main + hotspot targets
+const PAN_BOUNDS = {
+    minX: -2, minY: 0, minZ: -4,
+    maxX: 3, maxY: 2.5, maxZ: 1
+};
+const CAMERA_DISTANCE_MIN = 0.5;
+const CAMERA_DISTANCE_MAX = 20;
 
 /**
  * Initialize the PlayCanvas splat viewer in the given container.
@@ -100,6 +115,15 @@ export function initSplatViewer(options) {
     orbitScript.initialTargetX = INITIAL_CAM.target.x;
     orbitScript.initialTargetY = INITIAL_CAM.target.y;
     orbitScript.initialTargetZ = INITIAL_CAM.target.z;
+    orbitScript.usePanBounds = true;
+    orbitScript.panBoundsMinX = PAN_BOUNDS.minX;
+    orbitScript.panBoundsMinY = PAN_BOUNDS.minY;
+    orbitScript.panBoundsMinZ = PAN_BOUNDS.minZ;
+    orbitScript.panBoundsMaxX = PAN_BOUNDS.maxX;
+    orbitScript.panBoundsMaxY = PAN_BOUNDS.maxY;
+    orbitScript.panBoundsMaxZ = PAN_BOUNDS.maxZ;
+    orbitScript.distanceMin = CAMERA_DISTANCE_MIN;
+    orbitScript.distanceMax = CAMERA_DISTANCE_MAX;
 
     camera.setPosition(INITIAL_CAM.position.x, INITIAL_CAM.position.y, INITIAL_CAM.position.z);
     camera.lookAt(INITIAL_CAM.target.x, INITIAL_CAM.target.y, INITIAL_CAM.target.z);
@@ -108,6 +132,89 @@ export function initSplatViewer(options) {
 
     let mainSplatEntity = null;
     let hotspot1SplatEntity = null;
+    let showBoundsBox = false;
+
+    function createBoundsBoxEntity() {
+        const geometry = new pc.BoxGeometry();
+        const mesh = pc.Mesh.fromGeometry(app.graphicsDevice, geometry);
+        const material = new pc.StandardMaterial();
+        material.emissive = new pc.Color(0.2, 1, 0.3);
+        material.useLighting = false;
+        material.update();
+        const meshInstance = new pc.MeshInstance(mesh, material);
+        meshInstance.renderStyle = pc.RENDERSTYLE_WIREFRAME;
+        const entity = new pc.Entity('boundsBox');
+        entity.addComponent('render', { meshInstances: [meshInstance] });
+        entity.enabled = false;
+        app.root.addChild(entity);
+        return entity;
+    }
+
+    function updateBoundsBoxTransform(entity) {
+        const orbit = camera.script?.orbitCamera;
+        if (!orbit || !entity) return;
+        const minX = orbit.panBoundsMinX;
+        const minY = orbit.panBoundsMinY;
+        const minZ = orbit.panBoundsMinZ;
+        const maxX = orbit.panBoundsMaxX;
+        const maxY = orbit.panBoundsMaxY;
+        const maxZ = orbit.panBoundsMaxZ;
+        const cx = (minX + maxX) * 0.5;
+        const cy = (minY + maxY) * 0.5;
+        const cz = (minZ + maxZ) * 0.5;
+        const sx = Math.max(0.01, maxX - minX);
+        const sy = Math.max(0.01, maxY - minY);
+        const sz = Math.max(0.01, maxZ - minZ);
+        entity.setPosition(cx, cy, cz);
+        entity.setLocalScale(sx, sy, sz);
+    }
+
+    const boundsBoxEntity = createBoundsBoxEntity();
+
+    const placeholderApi = initPlaceholderSystem({
+        app,
+        canvas,
+        camera,
+        defaultBounds: PAN_BOUNDS
+    });
+
+    function getCameraBoundsConfig() {
+        const orbit = camera.script?.orbitCamera;
+        if (!orbit) return null;
+        return {
+            usePanBounds: orbit.usePanBounds,
+            panBoundsMinX: orbit.panBoundsMinX,
+            panBoundsMinY: orbit.panBoundsMinY,
+            panBoundsMinZ: orbit.panBoundsMinZ,
+            panBoundsMaxX: orbit.panBoundsMaxX,
+            panBoundsMaxY: orbit.panBoundsMaxY,
+            panBoundsMaxZ: orbit.panBoundsMaxZ,
+            distanceMin: orbit.distanceMin,
+            distanceMax: orbit.distanceMax,
+            keyPanSpeed: orbit.keyPanSpeed,
+            showBoundsBox
+        };
+    }
+
+    function setCameraBoundsConfig(config) {
+        const orbit = camera.script?.orbitCamera;
+        if (!orbit) return;
+        if (config.usePanBounds !== undefined) orbit.usePanBounds = config.usePanBounds;
+        if (config.panBoundsMinX !== undefined) orbit.panBoundsMinX = config.panBoundsMinX;
+        if (config.panBoundsMinY !== undefined) orbit.panBoundsMinY = config.panBoundsMinY;
+        if (config.panBoundsMinZ !== undefined) orbit.panBoundsMinZ = config.panBoundsMinZ;
+        if (config.panBoundsMaxX !== undefined) orbit.panBoundsMaxX = config.panBoundsMaxX;
+        if (config.panBoundsMaxY !== undefined) orbit.panBoundsMaxY = config.panBoundsMaxY;
+        if (config.panBoundsMaxZ !== undefined) orbit.panBoundsMaxZ = config.panBoundsMaxZ;
+        if (config.distanceMin !== undefined) orbit.distanceMin = config.distanceMin;
+        if (config.distanceMax !== undefined) orbit.distanceMax = config.distanceMax;
+        if (config.keyPanSpeed !== undefined) orbit.keyPanSpeed = config.keyPanSpeed;
+        if (config.showBoundsBox !== undefined) {
+            showBoundsBox = config.showBoundsBox;
+            boundsBoxEntity.enabled = showBoundsBox;
+        }
+        updateBoundsBoxTransform(boundsBoxEntity);
+    }
 
     function hideLoadingScreen() {
         if (loadingEl) {
@@ -116,8 +223,42 @@ export function initSplatViewer(options) {
         }
     }
 
+    function showLoadingScreen() {
+        if (loadingEl) {
+            loadingEl.classList.remove('splat-viewer__loading--hidden');
+            loadingEl.style.display = 'flex';
+        }
+    }
+
+    function applyCameraState(position, target) {
+        const orbit = camera.script?.orbitCamera;
+        if (!orbit) return;
+        const dx = position.x - target.x;
+        const dy = position.y - target.y;
+        const dz = position.z - target.z;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+        const dirX = dx / distance;
+        const dirY = dy / distance;
+        const dirZ = dz / distance;
+        const pitchRad = Math.asin(dirY);
+        const yawRad = Math.atan2(dirX, dirZ);
+        const pitch = pitchRad * pc.math.RAD_TO_DEG;
+        const yaw = yawRad * pc.math.RAD_TO_DEG;
+        orbit.target.set(target.x, target.y, target.z);
+        orbit._targetTarget.set(target.x, target.y, target.z);
+        orbit.yaw = yaw;
+        orbit._targetYaw = yaw;
+        orbit.pitch = pitch;
+        orbit._targetPitch = pitch;
+        orbit.distance = distance;
+        orbit._targetDistance = distance;
+        camera.setPosition(position.x, position.y, position.z);
+        camera.lookAt(target.x, target.y, target.z);
+    }
+
     function showHotspotScene() {
         inHotspotView = true;
+        applyCameraState(HOTSPOT1_CAM.position, HOTSPOT1_CAM.target);
         if (hotspotsEl) hotspotsEl.style.display = 'none';
         if (backButtonEl) backButtonEl.style.display = 'block';
     }
@@ -153,9 +294,11 @@ export function initSplatViewer(options) {
                 if (hotspot1SplatEntity.enabled) showHotspotScene(); else showMainScene();
                 return;
             }
+            showLoadingScreen();
             app.assets.loadFromUrl(HOTSPOT1_SPLAT_URL, 'gsplat', (err, asset) => {
                 if (err) {
                     console.error('Failed to load Hotspot 1 splat:', err);
+                    hideLoadingScreen();
                     return;
                 }
                 if (mainSplatEntity) mainSplatEntity.enabled = false;
@@ -165,6 +308,7 @@ export function initSplatViewer(options) {
                 hotspot1SplatEntity.setEulerAngles(h0.x, h0.y, h0.z);
                 app.root.addChild(hotspot1SplatEntity);
                 showHotspotScene();
+                hideLoadingScreen();
             });
         });
     }
@@ -260,13 +404,47 @@ export function initSplatViewer(options) {
         }
     }
 
+    function getCameraState() {
+        const orbit = camera.script?.orbitCamera;
+        if (!orbit) return null;
+        const pos = camera.getPosition();
+        const target = orbit.target;
+        const euler = camera.getEulerAngles();
+        return {
+            position: { x: pos.x, y: pos.y, z: pos.z },
+            target: { x: target.x, y: target.y, z: target.z },
+            rotation: { x: euler.x, y: euler.y, z: euler.z }
+        };
+    }
+
     return {
         destroy() {
+            placeholderApi.destroy();
             window.removeEventListener('resize', resizeHandler);
             app.destroy();
         },
         getEulerState,
         setMainSplatEuler,
-        setHotspotSplatEuler
+        setHotspotSplatEuler,
+        getCameraState,
+        getCameraBoundsConfig,
+        setCameraBoundsConfig,
+        enterPlacementMode: placeholderApi.enterPlacementMode,
+        cancelPlacementMode: placeholderApi.cancelPlacementMode,
+        getPlacementMode: placeholderApi.getPlacementMode,
+        getPlaceholders: placeholderApi.getPlaceholders,
+        getSelectedPlaceholder: placeholderApi.getSelectedPlaceholder,
+        getSelectedPlaceholderYaw: placeholderApi.getSelectedPlaceholderYaw,
+        setSelectedPlaceholderYaw: placeholderApi.setSelectedPlaceholderYaw,
+        nudgeSelectedRotation: placeholderApi.nudgeSelectedRotation,
+        getSelectedPlaceholderScale: placeholderApi.getSelectedPlaceholderScale,
+        setSelectedPlaceholderScale: placeholderApi.setSelectedPlaceholderScale,
+        deleteSelectedPlaceholder: placeholderApi.deleteSelectedPlaceholder,
+        setPlacementPlaneVisible: placeholderApi.setPlacementPlaneVisible,
+        getPlacementPlaneConfig: placeholderApi.getPlacementPlaneConfig,
+        setPlacementPlaneY: placeholderApi.setPlacementPlaneY,
+        setPlacementPlaneRotationY: placeholderApi.setPlacementPlaneRotationY,
+        setPlacementPlaneSize: placeholderApi.setPlacementPlaneSize,
+        isDraggingPlaceholder: placeholderApi.isDraggingPlaceholder
     };
 }

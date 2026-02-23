@@ -239,3 +239,32 @@
   color: rgba(255, 255, 255, 0.45);
   line-height: 1.3;
 }
+
+.splat-viewer__euler-panel-camera {
+  margin-top: 8px;
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.splat-viewer__euler-panel-camera-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.splat-viewer__euler-panel-camera-key {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.splat-viewer__euler-panel-camera-value {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: rgba(255, 255, 255, 0.9);
+  word-break: break-all;
+}

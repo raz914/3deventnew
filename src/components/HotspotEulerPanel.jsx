@@ -10,10 +10,17 @@ function clampDegrees(v) {
   return Number.isFinite(x) ? x : 0;
 }
 
+function formatVec3(v) {
+  if (!v) return '—';
+  const f = (n) => Number(n).toFixed(3);
+  return `${f(v.x)}, ${f(v.y)}, ${f(v.z)}`;
+}
+
 export default function HotspotEulerPanel({ api, className = '' }) {
   const [open, setOpen] = useState(true);
   const [target, setTarget] = useState('main');
   const [euler, setEuler] = useState({ x: 180, y: 0, z: 0 });
+  const [cameraState, setCameraState] = useState(null);
 
   useEffect(() => {
     if (!api) return;
@@ -21,6 +28,17 @@ export default function HotspotEulerPanel({ api, className = '' }) {
     const data = target === 'main' ? state.main : state.hotspot0;
     if (data) setEuler({ ...data });
   }, [api, target]);
+
+  useEffect(() => {
+    if (!api?.getCameraState || !open) return;
+    const tick = () => {
+      const state = api.getCameraState();
+      setCameraState(state);
+    };
+    tick();
+    const id = setInterval(tick, 150);
+    return () => clearInterval(id);
+  }, [api, open]);
 
   const handleChange = (axis, value) => {
     const num = clampDegrees(value);
@@ -85,6 +103,22 @@ export default function HotspotEulerPanel({ api, className = '' }) {
             ))}
           </div>
           <p className="splat-viewer__euler-panel-hint">Euler angles in degrees. Changes apply live.</p>
+
+          <label className="splat-viewer__euler-panel-label">Camera</label>
+          <div className="splat-viewer__euler-panel-camera">
+            <div className="splat-viewer__euler-panel-camera-row">
+              <span className="splat-viewer__euler-panel-camera-key">Position</span>
+              <span className="splat-viewer__euler-panel-camera-value">{cameraState ? formatVec3(cameraState.position) : '—'}</span>
+            </div>
+            <div className="splat-viewer__euler-panel-camera-row">
+              <span className="splat-viewer__euler-panel-camera-key">LookAt</span>
+              <span className="splat-viewer__euler-panel-camera-value">{cameraState ? formatVec3(cameraState.target) : '—'}</span>
+            </div>
+            <div className="splat-viewer__euler-panel-camera-row">
+              <span className="splat-viewer__euler-panel-camera-key">Rotation</span>
+              <span className="splat-viewer__euler-panel-camera-value">{cameraState ? formatVec3(cameraState.rotation) : '—'}</span>
+            </div>
+          </div>
         </div>
       )}
     </div>

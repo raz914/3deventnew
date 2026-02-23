@@ -1,4 +1,5 @@
 import * as pc from 'playcanvas';
+import { clampTargetToBounds, applyArrowKeyPan } from './cameraControlsHelper.js';
 
 /**
  * Full-featured orbit camera controller.
@@ -7,6 +8,7 @@ import * as pc from 'playcanvas';
  *   Mouse left-drag   → orbit
  *   Mouse right/mid   → pan
  *   Scroll wheel      → zoom
+ *   Arrow keys        → pan
  *   Touch 1-finger    → orbit
  *   Touch pinch       → zoom
  *   Touch 2-finger    → pan
@@ -15,12 +17,23 @@ export function registerOrbitCamera(app, canvas) {
     const OrbitCamera = pc.createScript('orbitCamera');
 
     OrbitCamera.attributes.add('distanceDefault', { type: 'number', default: 5 });
-    OrbitCamera.attributes.add('distanceMin', { type: 'number', default: 1 });
-    OrbitCamera.attributes.add('distanceMax', { type: 'number', default: 50 });
+    OrbitCamera.attributes.add('distanceMin', { type: 'number', default: 5 });
+    OrbitCamera.attributes.add('distanceMax', { type: 'number', default: 10 });
     OrbitCamera.attributes.add('orbitSensitivity', { type: 'number', default: 0.3 });
     OrbitCamera.attributes.add('panSensitivity', { type: 'number', default: 0.005 });
     OrbitCamera.attributes.add('zoomSensitivity', { type: 'number', default: 0.3 });
     OrbitCamera.attributes.add('inertia', { type: 'number', default: 0.12 });
+    OrbitCamera.attributes.add('keyPanSpeed', { type: 'number', default: 2 });
+    OrbitCamera.attributes.add('minCameraY', { type: 'number', default: 1.3 });
+
+    // Pan bounds (camera target clamped to this AABB when usePanBounds is true)
+    OrbitCamera.attributes.add('usePanBounds', { type: 'boolean', default: false });
+    OrbitCamera.attributes.add('panBoundsMinX', { type: 'number', default: -2 });
+    OrbitCamera.attributes.add('panBoundsMinY', { type: 'number', default: 1.5 });
+    OrbitCamera.attributes.add('panBoundsMinZ', { type: 'number', default: -1 });
+    OrbitCamera.attributes.add('panBoundsMaxX', { type: 'number', default: 3 });
+    OrbitCamera.attributes.add('panBoundsMaxY', { type: 'number', default: 2.5 });
+    OrbitCamera.attributes.add('panBoundsMaxZ', { type: 'number', default: 1 });
 
     // Initial camera state when scene starts (optional)
     OrbitCamera.attributes.add('initialYaw', { type: 'number', default: 0 });
@@ -185,21 +198,34 @@ export function registerOrbitCamera(app, canvas) {
     /*  Update – smooth interpolation every frame                         */
     /* ------------------------------------------------------------------ */
     OrbitCamera.prototype.update = function (dt) {
+        applyArrowKeyPan(this.app, this.entity, this._targetTarget, dt, this.keyPanSpeed);
+
         const t = 1.0 - Math.pow(this.inertia, dt * 60);
 
         this.yaw = pc.math.lerp(this.yaw, this._targetYaw, t);
         this.pitch = pc.math.lerp(this.pitch, this._targetPitch, t);
         this.distance = pc.math.lerp(this.distance, this._targetDistance, t);
+        this.distance = pc.math.clamp(this.distance, this.distanceMin, this.distanceMax);
         this.target.lerp(this.target, this._targetTarget, t);
+
+        if (this.usePanBounds) {
+            clampTargetToBounds(
+                this.target,
+                this.panBoundsMinX, this.panBoundsMinY, this.panBoundsMinZ,
+                this.panBoundsMaxX, this.panBoundsMaxY, this.panBoundsMaxZ
+            );
+            this._targetTarget.copy(this.target);
+        }
 
         const pitchRad = this.pitch * pc.math.DEG_TO_RAD;
         const yawRad = this.yaw * pc.math.DEG_TO_RAD;
 
-        this.entity.setPosition(
-            this.target.x + this.distance * Math.sin(yawRad) * Math.cos(pitchRad),
-            this.target.y + this.distance * Math.sin(pitchRad),
-            this.target.z + this.distance * Math.cos(yawRad) * Math.cos(pitchRad)
-        );
+        let camX = this.target.x + this.distance * Math.sin(yawRad) * Math.cos(pitchRad);
+        let camY = this.target.y + this.distance * Math.sin(pitchRad);
+        const camZ = this.target.z + this.distance * Math.cos(yawRad) * Math.cos(pitchRad);
+        if (camY < this.minCameraY) camY = this.minCameraY;
+
+        this.entity.setPosition(camX, camY, camZ);
 
         this.entity.lookAt(this.target);
     };
